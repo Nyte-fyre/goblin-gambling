@@ -1,0 +1,21 @@
+## Interface: 16001
+## Title: Goblin Gambling Co.
+## Notes: A joke casino with fake Play Gold. Slots now, Hold'em later. Never touches your real gold.
+## Author: Nyte-fyre
+## Version: 0.3.0
+## IconTexture: Interface\Icons\INV_Misc_Coin_02
+## SavedVariables: GoblinGamblingDB
+
+# Interface 16001 = WoW Forever (retail-based client), confirmed in game
+# 2026-09-29 along with BackdropTemplate, C_ChatInfo, C_Timer, SOUNDKIT
+# and numeric PlaySound IDs.
+
+Core.lua
+Sound.lua
+Stats.lua
+Games\SlotsLogic.lua
+Games\PokerLogic.lua
+UI\Widgets.lua
+UI\Window.lua
+Games\SlotsUI.lua
+UI\StatsTab.lua
