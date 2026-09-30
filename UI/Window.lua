@@ -35,8 +35,22 @@ local function SavePosition()
   pos.point, pos.relativePoint, pos.x, pos.y = point, relativePoint, x, y
 end
 
+local MIN_SCALE, MAX_SCALE = 0.7, 1.6
+
+local function ClampScale(s)
+  return math.max(MIN_SCALE, math.min(MAX_SCALE, tonumber(s) or 1))
+end
+
+function GG:SetWindowScale(s)
+  s = ClampScale(s)
+  GG.db.settings.windowScale = s
+  if frame then frame:SetScale(s) end
+  return s
+end
+
 local function RestorePosition()
   local pos = GG.db.settings.windowPos
+  frame:SetScale(ClampScale(GG.db.settings.windowScale))
   frame:ClearAllPoints()
   frame:SetPoint(pos.point or "CENTER", UIParent, pos.relativePoint or pos.point or "CENTER", pos.x or 0, pos.y or 0)
 end
@@ -98,14 +112,17 @@ function GG:ReleaseBalanceDisplay()
 end
 
 GG:On("BALANCE_CHANGED", function(new, old)
-  if frozen then return end
-  -- Losing money snaps; winning counts up.
-  if new < shown then
-    shown, target = new, new
-    RenderBalance()
-  else
-    StartTween(new)
+  if not frozen then
+    -- Losing money snaps; winning counts up.
+    if new < shown then
+      shown, target = new, new
+    else
+      StartTween(new)
+    end
   end
+  -- Always redraw: the debt line can change without the balance changing
+  -- (repaying Grubnik), and the count-up only redraws while it moves.
+  RenderBalance()
 end)
 
 ------------------------------------------------------------------------
@@ -194,6 +211,51 @@ local function Build()
   local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
   close:SetPoint("TOPRIGHT", -6, -6)
 
+  -- Resize grip: drag to scale the whole window (and the paytable with it).
+  -- The top-left corner stays put. Right-click resets to normal size.
+  local grip = CreateFrame("Button", nil, frame)
+  grip:SetSize(16, 16)
+  grip:SetPoint("BOTTOMRIGHT", -6, 6)
+  grip:SetFrameLevel(frame:GetFrameLevel() + 20)
+  grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+  grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+  grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+  grip:RegisterForClicks("RightButtonUp")
+
+  local function PinTopLeft(screenLeft, screenTop)
+    local es = frame:GetEffectiveScale()
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", screenLeft / es, screenTop / es)
+  end
+
+  grip:SetScript("OnMouseDown", function(self, button)
+    if button ~= "LeftButton" then return end
+    local es = frame:GetEffectiveScale()
+    self.left, self.top = frame:GetLeft() * es, frame:GetTop() * es
+    self:SetScript("OnUpdate", function()
+      local cx = GetCursorPosition()
+      local s = ClampScale((cx - self.left) / WIDTH / UIParent:GetEffectiveScale())
+      frame:SetScale(s)
+      PinTopLeft(self.left, self.top)
+    end)
+  end)
+  grip:SetScript("OnMouseUp", function(self, button)
+    if button ~= "LeftButton" or not self.left then return end
+    self:SetScript("OnUpdate", nil)
+    self.left = nil
+    GG:SetWindowScale(frame:GetScale())
+    SavePosition()
+  end)
+  grip:SetScript("OnClick", function()
+    local es = frame:GetEffectiveScale()
+    local left, top = frame:GetLeft() * es, frame:GetTop() * es
+    GG:SetWindowScale(1)
+    PinTopLeft(left, top)
+    SavePosition()
+  end)
+  GG.AttachTooltip(grip, "Resize", "Drag to make the casino bigger or smaller.\nRight-click to reset.")
+  frame.resizeGrip = grip
+
   -- Tabs
   tabButtons, panels = {}, {}
   local prev
@@ -224,11 +286,6 @@ local function Build()
   bar:SetPoint("BOTTOMLEFT", 16, 12)
   bar:SetPoint("BOTTOMRIGHT", -16, 12)
   bar:SetHeight(30)
-
-  local botRule = GG.CreateLine(bar)
-  botRule:SetPoint("TOPLEFT")
-  botRule:SetPoint("TOPRIGHT")
-  botRule:SetHeight(1)
 
   balanceText = bar:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   balanceText:SetPoint("LEFT", 6, -2)

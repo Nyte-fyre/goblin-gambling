@@ -3,7 +3,7 @@
 local ADDON, GG = ...
 
 GG.NAME = "Goblin Gambling Co."
-GG.VERSION = "0.3.0"
+GG.VERSION = "0.4.0"
 GG.DB_VERSION = 1
 
 GG.BAILOUT_AMOUNT = 1000
@@ -64,10 +64,14 @@ local function Defaults()
       sound = true,
       autospinDelay = 0.4,
       windowPos = { point = "CENTER", relativePoint = "CENTER", x = 0, y = 0 },
+      windowScale = 1,
       minimap = { hide = false, angle = 200 },
       lastTab = "slots",
       slotsBet = 10,          -- a number, or "max"
-      slotsSpeed = "medium",  -- "slow" | "medium" | "fast"
+      slotsSpeed = "medium",  -- "slow" | "medium" | "fast" (also paces poker)
+      pokerBots = 4,
+      pokerAutoDeal = false,
+      suitLetters = false,    -- show s/h/d/c instead of suit symbols
       showPaytable = false,
     },
     stats = DeepCopy(GG.Stats.DEFAULTS),
@@ -231,6 +235,7 @@ local HELP = {
   "|cffffd100/gg|r (or |cffffd100/ggc|r, |cffffd100/goblin|r) - open or close the casino",
   "|cffffd100/gg sound|r - mute or unmute",
   "|cffffd100/gg speed|r [slow|medium|fast] - reel speed (no word = next speed)",
+  "|cffffd100/gg suits|r - switch card suits between symbols and letters",
   "|cffffd100/gg soundtest|r - play every casino sound once, with its name",
   "|cffffd100/gg minimap|r - show or hide the minimap button",
   "|cffffd100/gg loan|r - visit Grubnik (bailout: +1,000 Goblin Gold, owe 1,250)",
@@ -271,6 +276,10 @@ SlashCmdList["GOBLINGAMBLING"] = function(msg)
     else
       Say("Unknown speed. Try |cffffd100/gg speed slow|r, |cffffd100medium|r or |cffffd100fast|r.")
     end
+  elseif cmd == "suits" then
+    GG.db.settings.suitLetters = not GG.db.settings.suitLetters
+    Say("Card suits now show as " .. (GG.db.settings.suitLetters and "letters (s h d c)." or "symbols."))
+    GG:Fire("SETTINGS_CHANGED")
   elseif cmd == "soundtest" then
     GG:SoundTest()
   elseif cmd == "minimap" then
@@ -292,6 +301,7 @@ events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function(self, event, arg1)
   if event == "ADDON_LOADED" and arg1 == ADDON then
     InitDB()
+    GG:Fire("DB_READY")
     -- Seed once per session. WoW may already seed its own RNG; never error.
     pcall(math.randomseed, time() + math.floor(GetTime() * 1000))
     self:UnregisterEvent("ADDON_LOADED")

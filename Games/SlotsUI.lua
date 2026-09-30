@@ -18,11 +18,11 @@ local REEL_GAP = 10
 -- per later reel, loops = full turns reel 1 makes, pause = seconds between
 -- autospins (scaled by settings.autospinDelay, 0.4 = as listed).
 local SPEEDS = {
-  { key = "slow",   name = "Riding Turtle", base = 2.0,  stagger = 0.7,  loops = 4, pause = 0.9,
+  { key = "slow",   name = "Riding Turtle", base = 2.0,  stagger = 0.7,  loops = 4, pause = 0.9, pace = 1.6,
     desc = "Slow and dramatic. Every reel takes its sweet time. Feel the tension. Feel the shell." },
-  { key = "medium", name = "Kodo Trot",     base = 0.9,  stagger = 0.35, loops = 2, pause = 0.4,
+  { key = "medium", name = "Kodo Trot",     base = 0.9,  stagger = 0.35, loops = 2, pause = 0.4, pace = 1,
     desc = "The standard goblin experience. Brisk, but you still get to watch." },
-  { key = "fast",   name = "Rocket Boots",  base = 0.45, stagger = 0.15, loops = 1, pause = 0.2,
+  { key = "fast",   name = "Rocket Boots",  base = 0.45, stagger = 0.15, loops = 1, pause = 0.2, pace = 0.5,
     desc = "Goblin engineering at its finest. Fast, loud, occasionally on fire." },
 }
 local SPEED_BY_KEY = {}
@@ -604,6 +604,11 @@ GG:RegisterPanel("slots", BuildPanel)
 
 GG.SLOT_SPEEDS = SPEEDS
 
+-- Poker uses the same speed setting: a multiplier on its pauses.
+function GG:GetPace()
+  return CurrentSpeed().pace or 1
+end
+
 -- key: "slow" | "medium" | "fast". Returns the speed, or nil if unknown.
 function GG:SetSlotSpeed(key)
   local sp = SPEED_BY_KEY[key]
@@ -626,6 +631,17 @@ end)
 
 GG:On("TAB_CHANGED", function(key)
   if key ~= "slots" then StopAutospin() end
+  -- The paytable hangs off the main window, so follow the Slots tab by hand.
+  -- showPaytable remembers whether it was open, so it comes back with the tab.
+  if not ui then return end
+  if key == "slots" then
+    if GG.db.settings.showPaytable then
+      if not ui.paytable then ui.paytable = BuildPaytable() end
+      ui.paytable:Show()
+    end
+  elseif ui.paytable then
+    ui.paytable:Hide()
+  end
 end)
 
 -- Exposed for tests.

@@ -44,4 +44,5 @@ if __name__ == "__main__":
         "tests/test_ui_smoke.lua",
         "tests/test_slots_ui.lua",
         "tests/test_stats_ui.lua",
+        "tests/test_poker_ui.lua",
     ])

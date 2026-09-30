@@ -77,6 +77,12 @@ H.eq(GG:GetDebt(), debt, "nothing paid before confirming")
 StaticPopupDialogs.GOBLINGAMBLING_REPAY.OnAccept()
 H.eq(GG:GetBalance(), 0, "paid everything we had")
 H.eq(GG:GetDebt(), debt - 2000, "debt reduced")
+local debtLineOk = false
+for w, txt in pairs(texts) do
+  if type(txt) == "string" and txt:find("Owed to Grubnik: " .. GG.FormatNumber(debt - 2000), 1, true)
+     and w:IsShown() then debtLineOk = true end
+end
+H.ok(debtLineOk, "balance bar debt line shows the reduced debt after a partial payment")
 GG.db.balance = 100000
 GG:Fire("BALANCE_CHANGED", 100000, 0)
 M.slash("repay")
@@ -84,6 +90,12 @@ StaticPopupDialogs.GOBLINGAMBLING_REPAY.OnAccept()
 H.eq(GG:GetDebt(), 0, "debt cleared")
 H.eq(GG:GetBalance(), 100000 - (debt - 2000), "only the debt was taken")
 H.ok(said("Debt cleared"), "cleared message")
+-- The red debt line on the balance bar goes away once the debt is paid
+for w, txt in pairs(texts) do
+  if type(txt) == "string" and txt:find("Owed to Grubnik: ") then
+    H.eq(w:IsShown(), false, "balance bar debt line hidden after paying off")
+  end
+end
 H.ok(onScreen("nothing"), "tab shows no debt")
 local n = #M.popups
 M.slash("repay")

@@ -56,7 +56,15 @@ function Widget:Hide()
 end
 function Widget:SetShown(v) if v then self:Show() else self:Hide() end end
 function Widget:IsShown() return self._shown end
-function Widget:IsVisible() return self._shown end
+function Widget:IsVisible()
+  -- Visible only if this frame and every parent is shown, like WoW.
+  local f = self
+  while f do
+    if not rawget(f, "_shown") then return false end
+    f = rawget(f, "_parent")
+  end
+  return true
+end
 
 function Widget:SetPoint(...) table.insert(self._points, { ... }) end
 function Widget:ClearAllPoints() self._points = {} end
@@ -74,7 +82,11 @@ function Widget:SetHeight(h) self._height = h end
 function Widget:GetWidth() return self._width end
 function Widget:GetHeight() return self._height end
 function Widget:GetCenter() return 500, 400 end
-function Widget:GetEffectiveScale() return 1 end
+function Widget:SetScale(s) self._scale = s end
+function Widget:GetScale() return rawget(self, "_scale") or 1 end
+function Widget:GetEffectiveScale() return rawget(self, "_scale") or 1 end
+function Widget:GetLeft() return 100 end
+function Widget:GetTop() return 500 end
 function Widget:GetName() return self._name end
 function Widget:GetParent() return self._parent end
 
@@ -82,6 +94,7 @@ function Widget:SetText(t) self._text = t end
 function Widget:GetText() return self._text end
 function Widget:SetFormattedText(fmt, ...) self._text = fmt:format(...) end
 function Widget:GetStringWidth() return #tostring(self._text) * 6 end
+function Widget:GetStringHeight() return 12 end
 function Widget:SetChecked(v) self._checked = v and true or false end
 function Widget:GetChecked() return self._checked end
 function Widget:LockHighlight() self._highlightLocked = true end
@@ -190,7 +203,7 @@ function M.advance(seconds, step)
     t = t + step
     for _, f in ipairs(M.frames) do
       local fn = f._scripts.OnUpdate
-      if fn and f._shown then fn(f, step) end
+      if fn and f:IsVisible() then fn(f, step) end
     end
     local due = {}
     for i = #M.timers, 1, -1 do

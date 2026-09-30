@@ -72,6 +72,32 @@ H.eq(pos.point, "TOPLEFT", "saved point")
 H.eq(pos.x, 123, "saved x")
 H.eq(pos.y, -45, "saved y")
 
+-- Resize grip: drag scales the window, right-click resets, scale persists
+local grip = frame.resizeGrip
+H.ok(grip, "resize grip exists")
+M.cursorX = 100 + 520 * 1.3          -- window left is 100 in the mock
+grip:Fire("OnMouseDown", "LeftButton")
+M.advance(0.1)
+grip:Fire("OnMouseUp", "LeftButton")
+H.eq(math.floor(GG.db.settings.windowScale * 100 + 0.5), 130, "dragged to 130%")
+H.eq(frame:GetScale(), GG.db.settings.windowScale, "frame scaled")
+H.eq(GG.db.settings.windowPos.point, "TOPLEFT", "top-left pinned while resizing")
+M.cursorX = 5000
+grip:Fire("OnMouseDown", "LeftButton"); M.advance(0.1); grip:Fire("OnMouseUp", "LeftButton")
+H.eq(GG.db.settings.windowScale, 1.6, "scale capped at 160%")
+M.cursorX = 0
+grip:Fire("OnMouseDown", "LeftButton"); M.advance(0.1); grip:Fire("OnMouseUp", "LeftButton")
+H.eq(GG.db.settings.windowScale, 0.7, "scale floored at 70%")
+grip:Fire("OnClick", "RightButton")
+H.eq(GG.db.settings.windowScale, 1, "right-click resets size")
+GG:SetWindowScale(1.25)
+M.cursorX = nil
+frame:ClearAllPoints()
+frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 123, -45)
+for _, f in ipairs(M.frames) do
+  if f._scripts.OnDragStop and f._parent == frame then f:Fire("OnDragStop") end
+end
+
 M.slash("toggle")
 H.eq(frame:IsShown(), false, "toggle closes")
 M.slash("show")
@@ -189,6 +215,9 @@ H.eq(GG2:GetBalance(), 1000 - 337, "balance survives reload")
 H.eq(GG2.db.settings.minimap.angle, 45, "settings survive reload")
 H.eq(GG2.db.stats.biggestWinMult, 0, "missing key filled on load")
 H.eq(GG2.db.settings.windowPos.x, 123, "position survives reload")
+H.eq(GG2.db.settings.windowScale, 1.25, "size survives reload")
+GG2:ShowWindow()
+H.eq(GoblinGamblingFrame:GetScale(), 1.25, "window opens at the saved size")
 
 -- Corrupt balance gets repaired, not crashed on
 M.frames = {}

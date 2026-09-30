@@ -13,6 +13,7 @@ mail, never sends chat messages, and only touches its own SavedVariables
 | `/gg` (backups: `/ggc`, `/goblin`) | Open or close the casino |
 | `/gg sound` | Mute or unmute |
 | `/gg speed [slow\|medium\|fast]` | Reel speed: Riding Turtle, Kodo Trot or Rocket Boots |
+| `/gg suits` | Show card suits as letters (s h d c) instead of symbols |
 | `/gg soundtest` | Play each casino sound once, with its name |
 | `/gg minimap` | Show or hide the minimap button |
 | `/gg loan` | Visit Grubnik: +1,000 Goblin Gold, owe 1,250 |

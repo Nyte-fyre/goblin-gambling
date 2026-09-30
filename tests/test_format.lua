@@ -20,6 +20,7 @@ local files = {
   "Core.lua", "Sound.lua", "Stats.lua", "UI/Widgets.lua", "UI/Window.lua",
   "Games/SlotsLogic.lua", "Games/PokerLogic.lua", "Games/PokerBots.lua", "Games/SlotsUI.lua",
   "UI/StatsTab.lua",
+  "Games/PokerUI.lua",
 }
 for _, f in ipairs(files) do
   local chunk, err = loadfile(f)

@@ -200,6 +200,29 @@ M.findButton("Paytable"):Fire("OnClick")
 H.eq(GG.db.settings.showPaytable, true, "paytable shown")
 M.findButton("Paytable"):Fire("OnClick")
 H.eq(GG.db.settings.showPaytable, false, "paytable hidden")
+
+-- The paytable follows the Slots tab: hidden elsewhere, back when you return
+local function paytableFrame()
+  for _, f in ipairs(M.frames) do
+    for _, pt in ipairs(f._points) do
+      if pt[1] == "TOPLEFT" and pt[2] == GoblinGamblingFrame and pt[3] == "TOPRIGHT" then return f end
+    end
+  end
+end
+M.findButton("Paytable"):Fire("OnClick")
+local pt = paytableFrame()
+H.ok(pt and pt:IsShown(), "paytable open on slots")
+GG:SelectTab("poker")
+H.eq(pt:IsShown(), false, "paytable hides on the poker tab")
+GG:SelectTab("stats")
+H.eq(pt:IsShown(), false, "paytable stays hidden on the stats tab")
+H.eq(GG.db.settings.showPaytable, true, "leaving the tab does not forget it was open")
+GG:SelectTab("slots")
+H.eq(pt:IsShown(), true, "paytable comes back with the slots tab")
+M.findButton("Paytable"):Fire("OnClick")
+GG:SelectTab("stats")
+GG:SelectTab("slots")
+H.eq(pt:IsShown(), false, "a closed paytable stays closed when you come back")
 for _, f in ipairs(M.frames) do f:Fire("OnEnter"); f:Fire("OnLeave") end  -- every tooltip
 
 GG.db.balance = 1000

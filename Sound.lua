@@ -17,11 +17,15 @@ GG.SOUNDS = {
   bigWin   = K.UI_EPICLOOT_TOAST or 31578,
   jackpot  = K.LEVELUP or 888,
   bailout  = K.MONEY_FRAME_CLOSE or 892,
+  card     = K.IG_ABILITY_PAGE_TURN or 836,
+  chips    = K.LOOT_WINDOW_COIN_SOUND or 120,
+  yourTurn = K.READY_CHECK or 8960,
 }
 
 -- Order for /gg soundtest.
 local TEST_ORDER = { "open", "close", "tab", "click", "spin", "reelStop",
-                     "loss", "smallWin", "bigWin", "jackpot", "bailout" }
+                     "loss", "smallWin", "bigWin", "jackpot", "bailout",
+                     "card", "chips", "yourTurn" }
 
 -- Never let a bad sound ID throw an error.
 local function Play(id)

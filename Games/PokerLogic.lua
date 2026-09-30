@@ -548,7 +548,9 @@ function Poker.StartHand(t)
   t.street = "preflop"
   t.raiseCount = 0
 
-  Emit(t, { type = "hand", handNo = t.handNo, button = t.button })
+  local stacks, dealtIn = {}, {}
+  for i, p in ipairs(t.seats) do stacks[i], dealtIn[i] = p.stack, p.inHand end
+  Emit(t, { type = "hand", handNo = t.handNo, button = t.button, stacks = stacks, inHand = dealtIn })
 
   local inHand = function(p) return p.inHand end
   local sbSeat, bbSeat
@@ -685,6 +687,82 @@ function Poker.DecodeAction(str)
   local seat, kind, amount = tostring(str):match("^(%d+):(%a+):(%d+)$")
   if not seat or not VALID_ACTIONS[kind] then return nil end
   return tonumber(seat), { type = kind, amount = tonumber(amount) }
+end
+
+------------------------------------------------------------------------
+-- Display model. The engine resolves a whole hand instantly (an all-in
+-- call deals flop, turn and river at once), so the UI replays t.events one
+-- at a time into this model and draws the model, not the engine.
+-- After the last event it matches the engine exactly (tests check this).
+------------------------------------------------------------------------
+function Poker.NewDisplay(nSeats)
+  local vm = { board = {}, pot = 0, seats = {}, handNo = 0, done = true }
+  for i = 1, nSeats do vm.seats[i] = { stack = 0, bet = 0 } end
+  return vm
+end
+
+local function CollectBets(vm)
+  for _, s in ipairs(vm.seats) do
+    vm.pot = vm.pot + s.bet
+    s.bet = 0
+  end
+end
+
+function Poker.ApplyEvent(vm, ev)
+  local s = ev.seat and vm.seats[ev.seat]
+  if ev.type == "hand" then
+    vm.board, vm.pot, vm.done = {}, 0, false
+    vm.handNo, vm.button, vm.street = ev.handNo, ev.button, "preflop"
+    for i, stack in ipairs(ev.stacks) do
+      vm.seats[i] = { stack = stack, bet = 0, inHand = ev.inHand[i], folded = false, allIn = false,
+                      label = nil, shown = nil, won = 0 }
+    end
+  elseif ev.type == "blind" then
+    s.stack = s.stack - ev.amount
+    s.bet = s.bet + ev.amount
+    s.allIn = s.stack == 0
+    s.label = ev.blind == "small" and "Small blind" or "Big blind"
+  elseif ev.type == "deal" then
+    vm.dealt = true
+  elseif ev.type == "action" then
+    local a = ev.action
+    if a == "fold" then
+      s.folded = true
+      s.label = "Fold"
+    elseif a == "check" then
+      s.label = "Check"
+    elseif a == "call" then
+      s.stack = s.stack - ev.amount
+      s.bet = s.bet + ev.amount
+      s.label = "Call " .. ev.amount
+    else -- bet / raise: amount is the new total for this street
+      s.stack = s.stack - (ev.amount - s.bet)
+      s.bet = ev.amount
+      s.label = (a == "bet" and "Bet " or "Raise to ") .. ev.amount
+    end
+    s.allIn = ev.allIn and true or false
+    if s.allIn then s.label = "All-in" end
+  elseif ev.type == "street" then
+    CollectBets(vm)
+    vm.street = ev.street
+    for _, c in ipairs(ev.cards) do vm.board[#vm.board + 1] = c end
+    for _, seat in ipairs(vm.seats) do
+      if not seat.folded and not seat.allIn then seat.label = nil end
+    end
+  elseif ev.type == "showdown" then
+    CollectBets(vm)
+    vm.street = "showdown"
+    for seat, h in pairs(ev.hands) do vm.seats[seat].shown = h end
+  elseif ev.type == "win" then
+    CollectBets(vm)
+    vm.pot = vm.pot - ev.amount
+    s.stack = s.stack + ev.amount
+    s.won = (s.won or 0) + ev.amount
+    s.label = ev.hand and ("Wins " .. ev.amount .. " - " .. ev.hand) or ("Wins " .. ev.amount)
+  elseif ev.type == "handEnd" then
+    CollectBets(vm)
+    vm.done = true
+  end
 end
 
 ------------------------------------------------------------------------

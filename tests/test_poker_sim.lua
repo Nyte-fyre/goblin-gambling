@@ -82,6 +82,20 @@ local function run(label, seats, choose, rng, hands)
     H.eq(sum, total, label .. ": stacks add up after the hand")
     H.eq(P.Pot(t), 0, "pot emptied")
 
+    -- The UI's display model, replayed from the event log, lands on the
+    -- same stacks as the engine.
+    local vm = P.NewDisplay(#t.seats)
+    for _, ev in ipairs(t.events) do P.ApplyEvent(vm, ev) end
+    H.eq(vm.done, true, "display saw the hand end")
+    H.eq(vm.pot, 0, "display pot emptied")
+    for i, p in ipairs(t.seats) do
+      if vm.seats[i].stack ~= p.stack then
+        error(("%s: display stack for seat %d is %d, engine has %d (hand %d)"):format(label, i,
+          vm.seats[i].stack, p.stack, t.handNo))
+      end
+    end
+    H.eq(#vm.board, #t.board, "display board matches")
+
     stats.hands = stats.hands + 1
     stats.actions = stats.actions + actions
     if actions > stats.maxActions then stats.maxActions = actions end
