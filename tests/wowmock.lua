@@ -178,6 +178,24 @@ C_Timer = {
   After = function(delay, fn) table.insert(M.timers, { at = M.now + delay, fn = fn }) end,
 }
 function geterrorhandler() return function(err) error(err, 0) end end
+
+-- Player identity, groups and hidden addon messages
+M.player, M.realm = "Nyte", "Forever"
+M.inGroup, M.inRaid, M.inGuild = false, false, false
+M.addonSent = {}
+function UnitName() return M.player end
+function UnitFullName() return M.player, M.realm end
+function GetNormalizedRealmName() return M.realm end
+function IsInRaid() return M.inRaid end
+function IsInGroup() return M.inGroup or M.inRaid end
+function IsInGuild() return M.inGuild end
+C_ChatInfo = {
+  RegisterAddonMessagePrefix = function() return true end,
+  SendAddonMessage = function(prefix, text, kind, target)
+    table.insert(M.addonSent, { prefix = prefix, text = text, kind = kind, target = target })
+    return 0
+  end,
+}
 math.atan2 = math.atan2 or math.atan
 
 local realPrint = print

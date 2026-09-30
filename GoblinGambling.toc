@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: Goblin Gambling Co.
-## Notes: A joke casino with fake Goblin Gold. Slots now, Hold'em later. Never touches your real gold.
+## Notes: A joke casino with fake Goblin Gold. Slots and Hold'em, solo or with friends. Never touches your real gold.
 ## Author: Nyte-fyre
-## Version: 0.4.0
+## Version: 0.5.0
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02
 ## SavedVariables: GoblinGamblingDB
 
@@ -16,8 +16,10 @@ Stats.lua
 Games\SlotsLogic.lua
 Games\PokerLogic.lua
 Games\PokerBots.lua
+Games\PokerNet.lua
 UI\Widgets.lua
 UI\Window.lua
 Games\SlotsUI.lua
 UI\StatsTab.lua
+Games\PokerMP.lua
 Games\PokerUI.lua

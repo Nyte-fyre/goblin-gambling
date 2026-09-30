@@ -39,10 +39,12 @@ if __name__ == "__main__":
         "tests/test_poker_eval.lua",
         "tests/test_poker_engine.lua",
         "tests/test_poker_sim.lua",
+        "tests/test_poker_net.lua",
         "tests/test_stats.lua",
         "tests/test_format.lua",
         "tests/test_ui_smoke.lua",
         "tests/test_slots_ui.lua",
         "tests/test_stats_ui.lua",
         "tests/test_poker_ui.lua",
+        "tests/test_poker_mp_ui.lua",
     ])

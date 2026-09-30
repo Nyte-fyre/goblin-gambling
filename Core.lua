@@ -3,7 +3,7 @@
 local ADDON, GG = ...
 
 GG.NAME = "Goblin Gambling Co."
-GG.VERSION = "0.4.0"
+GG.VERSION = "0.5.0"
 GG.DB_VERSION = 1
 
 GG.BAILOUT_AMOUNT = 1000
