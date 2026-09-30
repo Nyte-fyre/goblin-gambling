@@ -232,7 +232,7 @@ end
 -- Result:
 --   reels  = { sym1, sym2, sym3 }   symbols on the middle row
 --   stops  = { i1, i2, i3 }         strip indices (for the UI animation)
---   payout = Play Gold returned (0 on a loss; includes the stake on wins)
+--   payout = Goblin Gold returned (0 on a loss; includes the stake on wins)
 --   mult, tier ("loss"|"small"|"big"|"jackpot"), label, lines
 ------------------------------------------------------------------------
 function Slots.Spin(bet, rng, cfg)

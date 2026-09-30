@@ -2,7 +2,7 @@
 
 A joke casino for WoW: Forever. Slots now, Texas Hold'em vs. bots later.
 
-**Play Gold only.** The addon never reads or moves your real gold, items or
+**Goblin Gold only.** The addon never reads or moves your real gold, items or
 mail, never sends chat messages, and only touches its own SavedVariables
 (`GoblinGamblingDB`).
 
@@ -15,9 +15,9 @@ mail, never sends chat messages, and only touches its own SavedVariables
 | `/gg speed [slow\|medium\|fast]` | Reel speed: Riding Turtle, Kodo Trot or Rocket Boots |
 | `/gg soundtest` | Play each casino sound once, with its name |
 | `/gg minimap` | Show or hide the minimap button |
-| `/gg loan` | Visit Grubnik: +1,000 Play Gold, owe 1,250 |
+| `/gg loan` | Visit Grubnik: +1,000 Goblin Gold, owe 1,250 |
 | `/gg repay` | Pay Grubnik back as much as you can (asks first) |
-| `/gg reset` | Wipe Play Gold, debt and stats (asks first) |
+| `/gg reset` | Wipe Goblin Gold, debt and stats (asks first) |
 
 ## Tests
 

@@ -313,7 +313,7 @@ function Finish(silent)
     if res.tier == "big" or res.tier == "jackpot" then
       StopAutospin("big win! Take a moment to gloat.")
     elseif not GG:CanAfford(CurrentBet()) then
-      StopAutospin("not enough Play Gold for that bet.")
+      StopAutospin("not enough Goblin Gold for that bet.")
     else
       local gen = autospinGen
       local pause = CurrentSpeed().pause * ((GG.db.settings.autospinDelay or 0.4) / 0.4)
@@ -336,7 +336,7 @@ function DoSpin()
   end
   local bet = CurrentBet()
   if not GG:CanAfford(bet) then
-    StopAutospin("not enough Play Gold for that bet.")
+    StopAutospin("not enough Goblin Gold for that bet.")
     return
   end
 
@@ -511,7 +511,7 @@ local function BuildPanel(panel)
   ui.detail = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   ui.detail:SetPoint("TOP", ui.flavor, "BOTTOM", 0, -4)
   ui.detail:SetWidth(460)
-  ui.detail:SetText("Pick a bet and hit Spin. Payouts go straight into your Play Gold.")
+  ui.detail:SetText("Pick a bet and hit Spin. Payouts go straight into your Goblin Gold.")
 
   -- Bet row
   local betLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -584,7 +584,7 @@ local function BuildPanel(panel)
       end
       UpdateControls()
     end,
-    "Autospin", "Keeps spinning until you win big, run low on Play Gold, or close the window.")
+    "Autospin", "Keeps spinning until you win big, run low on Goblin Gold, or close the window.")
   ui.autospin:SetPoint("BOTTOMLEFT", 8, 10)
 
   ui.paytableButton = GG.CreateButton(panel, "Paytable", 90, 22, function()

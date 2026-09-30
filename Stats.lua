@@ -9,7 +9,7 @@ GG.Stats = Stats
 
 Stats.DEFAULTS = {
   totalWagered = 0, totalWon = 0,
-  biggestWin = 0,      -- largest single payout, in Play Gold
+  biggestWin = 0,      -- largest single payout, in Goblin Gold
   biggestWinMult = 0,  -- largest payout / wager, for the Lucky Goblin title
   spins = 0, hands = 0,
   curLoseStreak = 0, maxLoseStreak = 0,
@@ -28,7 +28,7 @@ function Stats.Net(s)
 end
 
 -- Record one finished round.
--- kind: "spin" or "hand". wager: Play Gold put in. payout: Play Gold
+-- kind: "spin" or "hand". wager: Goblin Gold put in. payout: Goblin Gold
 -- returned (0 on a loss, includes the stake on a win).
 -- A payout above the wager is a win, below is a loss, equal is a push
 -- (money back), which leaves both streaks alone.
@@ -68,9 +68,9 @@ end
 ------------------------------------------------------------------------
 Stats.TITLES = {
   { title = "Whale",
-    desc  = "Down more than 50,000 Play Gold. The goblins have named a yacht after you.",
+    desc  = "Down more than 50,000 Goblin Gold. The goblins have named a yacht after you.",
     test  = function(s) return Stats.Net(s) < -50000 end,
-    progress = function(s) return math.max(0, -Stats.Net(s)), 50000, "Play Gold down" end },
+    progress = function(s) return math.max(0, -Stats.Net(s)), 50000, "Goblin Gold down" end },
   { title = "Debtor of Ratchet",
     desc  = "Took 3 or more bailouts. Grubnik knows where you hearth.",
     test  = function(s) return (s.bailouts or 0) >= 3 end,

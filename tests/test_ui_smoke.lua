@@ -87,7 +87,7 @@ do
   local orig = Widget.SetText
   Widget.SetText = function(self, t)
     if type(t) == "string" then
-      local num = t:match("^Play Gold: |cffffd100([%d,%-]+)|r")
+      local num = t:match("^Goblin Gold: |cffffd100([%d,%-]+)|r")
       if num then barValue = tonumber((num:gsub(",", ""))) end
     end
     return orig(self, t)

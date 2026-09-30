@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Goblin Gambling Co.
-## Notes: A joke casino with fake Play Gold. Slots now, Hold'em later. Never touches your real gold.
+## Notes: A joke casino with fake Goblin Gold. Slots now, Hold'em later. Never touches your real gold.
 ## Author: Nyte-fyre
 ## Version: 0.3.0
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02

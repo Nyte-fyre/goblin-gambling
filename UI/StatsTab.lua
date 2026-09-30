@@ -14,7 +14,7 @@ end
 
 -- Label / value rows, left column. Each returns the value text.
 local ROWS = {
-  { "Play Gold",           function(s) return GG.FormatGold(GG:GetBalance()) end },
+  { "Goblin Gold",           function(s) return GG.FormatGold(GG:GetBalance()) end },
   { "Lifetime wagered",    function(s) return FN(s.totalWagered) end },
   { "Lifetime won",        function(s) return FN(s.totalWon) end },
   { "Net",                 function(s) local n = Stats.Net(s) return Colored(n, FN(n)) end },
@@ -138,12 +138,12 @@ local function BuildPanel(panel)
 
   -- Buttons
   ui.repay = GG.CreateButton(panel, "Pay Grubnik", 110, 22, function() GG:ShowRepay() end,
-    "Pay Grubnik", "Pay back as much of your debt as your Play Gold covers. Asks first.")
+    "Pay Grubnik", "Pay back as much of your debt as your Goblin Gold covers. Asks first.")
   ui.repay:SetPoint("BOTTOMLEFT", 8, 4)
 
   local reset = GG.CreateButton(panel, "Reset stats", 110, 22,
     function() StaticPopup_Show("GOBLINGAMBLING_RESET_STATS") end,
-    "Reset stats", "Wipes lifetime stats and your title. Play Gold and debt stay. Asks first.")
+    "Reset stats", "Wipes lifetime stats and your title. Goblin Gold and debt stay. Asks first.")
   reset:SetPoint("BOTTOMRIGHT", -8, 4)
 
   panel:SetScript("OnShow", Refresh)

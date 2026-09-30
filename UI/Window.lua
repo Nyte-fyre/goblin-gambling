@@ -66,7 +66,7 @@ local TWEEN = 0.8
 
 local function RenderBalance()
   if not balanceText then return end
-  balanceText:SetText("Play Gold: " .. GG.FormatGold(shown))
+  balanceText:SetText("Goblin Gold: " .. GG.FormatGold(shown))
   local debt = GG:GetDebt()
   if debt > 0 then
     debtText:SetText("|cffff5555Owed to Grubnik: " .. GG.FormatNumber(debt) .. "|r")
@@ -237,7 +237,7 @@ local function Build()
 
   local balanceHover = CreateFrame("Frame", nil, bar)
   balanceHover:SetAllPoints(balanceText)
-  GG.AttachTooltip(balanceHover, "Play Gold",
+  GG.AttachTooltip(balanceHover, "Goblin Gold",
     "Fake casino money. It is not your real gold and cannot become real gold. "
     .. "The goblins are very clear about this, legally.")
 
@@ -337,7 +337,7 @@ function GG:CreateMinimapButton()
   mmButton:SetScript("OnDragStart", function(self) self:SetScript("OnUpdate", DragUpdate) end)
   mmButton:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
   GG.AttachTooltip(mmButton, GG.NAME, function()
-    return "Play Gold: " .. GG.FormatGold(GG:GetBalance())
+    return "Goblin Gold: " .. GG.FormatGold(GG:GetBalance())
       .. "\n\n|cff00ff00Click|r to open the casino\n|cff00ff00Drag|r to move this button"
       .. "\n|cff888888/gg minimap hides it|r"
   end)

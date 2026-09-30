@@ -1,5 +1,5 @@
 -- Goblin Gambling Co. : namespace, SavedVariables, balance API, slash commands.
--- Play Gold only. Nothing in this addon reads or moves real gold or items.
+-- Goblin Gold only. Nothing in this addon reads or moves real gold or items.
 local ADDON, GG = ...
 
 GG.NAME = "Goblin Gambling Co."
@@ -103,7 +103,7 @@ function GG:ResetStats()
 end
 
 ------------------------------------------------------------------------
--- Balance API: the only way games touch Play Gold.
+-- Balance API: the only way games touch Goblin Gold.
 ------------------------------------------------------------------------
 local function ValidAmount(n)
   return type(n) == "number" and n > 0 and n == math.floor(n)
@@ -139,7 +139,7 @@ function GG:Bailout()
   self:Credit(GG.BAILOUT_AMOUNT)
   self:Fire("STATS_CHANGED")
   GG:PlaySound("bailout")
-  Say(("Grubnik slides over %s Play Gold. You now owe %s. He is smiling."):format(
+  Say(("Grubnik slides over %s Goblin Gold. You now owe %s. He is smiling."):format(
     GG.FormatNumber(GG.BAILOUT_AMOUNT), GG.FormatNumber(self.db.debt)))
 end
 
@@ -170,7 +170,7 @@ end
 -- Popups (StaticPopup is Blizzard's, but we only add our own dialogs)
 ------------------------------------------------------------------------
 StaticPopupDialogs["GOBLINGAMBLING_RESET"] = {
-  text = "Reset |cffffd100Goblin Gambling Co.|r?\n\nPlay Gold, debt and all stats go back to the start. "
+  text = "Reset |cffffd100Goblin Gambling Co.|r?\n\nGoblin Gold, debt and all stats go back to the start. "
       .. "The goblins will pretend they never met you.",
   button1 = YES, button2 = NO,
   OnAccept = function()
@@ -181,7 +181,7 @@ StaticPopupDialogs["GOBLINGAMBLING_RESET"] = {
 }
 
 StaticPopupDialogs["GOBLINGAMBLING_RESET_STATS"] = {
-  text = "Reset your lifetime stats?\n\nYour Play Gold and debt stay. Only the evidence goes away.",
+  text = "Reset your lifetime stats?\n\nYour Goblin Gold and debt stay. Only the evidence goes away.",
   button1 = YES, button2 = NO,
   OnAccept = function()
     GG:ResetStats()
@@ -192,7 +192,7 @@ StaticPopupDialogs["GOBLINGAMBLING_RESET_STATS"] = {
 
 StaticPopupDialogs["GOBLINGAMBLING_LOAN"] = {
   text = "|cffffd100Grubnik's Loans|r\n25%% interest, no questions asked.\n\n"
-      .. "Take %s Play Gold now and owe %s forever?",
+      .. "Take %s Goblin Gold now and owe %s forever?",
   button1 = "Accept", button2 = "Nope",
   OnAccept = function() GG:Bailout() end,
   OnCancel = function(_, _, reason)
@@ -202,7 +202,7 @@ StaticPopupDialogs["GOBLINGAMBLING_LOAN"] = {
 }
 
 StaticPopupDialogs["GOBLINGAMBLING_REPAY"] = {
-  text = "Pay Grubnik back %s Play Gold?\n\nYou owe %s. He accepts Play Gold, gold teeth and firstborns.",
+  text = "Pay Grubnik back %s Goblin Gold?\n\nYou owe %s. He accepts Goblin Gold, gold teeth and firstborns.",
   button1 = "Pay up", button2 = "Not today",
   OnAccept = function() GG:RepayDebt() end,
   timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
@@ -213,7 +213,7 @@ function GG:ShowRepay()
   if self.db.debt <= 0 then
     Say("You don't owe Grubnik anything. He finds this suspicious.")
   elseif amount <= 0 then
-    Say("You have no Play Gold to pay Grubnik with. He writes that down.")
+    Say("You have no Goblin Gold to pay Grubnik with. He writes that down.")
   else
     StaticPopup_Show("GOBLINGAMBLING_REPAY", GG.FormatNumber(amount), GG.FormatNumber(self.db.debt))
   end
@@ -233,9 +233,9 @@ local HELP = {
   "|cffffd100/gg speed|r [slow|medium|fast] - reel speed (no word = next speed)",
   "|cffffd100/gg soundtest|r - play every casino sound once, with its name",
   "|cffffd100/gg minimap|r - show or hide the minimap button",
-  "|cffffd100/gg loan|r - visit Grubnik (bailout: +1,000 Play Gold, owe 1,250)",
+  "|cffffd100/gg loan|r - visit Grubnik (bailout: +1,000 Goblin Gold, owe 1,250)",
   "|cffffd100/gg repay|r - pay Grubnik back as much as you can",
-  "|cffffd100/gg reset|r - wipe Play Gold, debt and stats (asks first)",
+  "|cffffd100/gg reset|r - wipe Goblin Gold, debt and stats (asks first)",
 }
 
 -- /ggc and /goblin are backups in case another addon also claims /gg.
@@ -278,7 +278,7 @@ SlashCmdList["GOBLINGAMBLING"] = function(msg)
     GG:UpdateMinimapButton()
     Say("Minimap button " .. (GG.db.settings.minimap.hide and "hidden. /gg minimap brings it back." or "shown."))
   else
-    Say(GG.NAME .. " v" .. GG.VERSION .. " - Play Gold only, no real gold involved.")
+    Say(GG.NAME .. " v" .. GG.VERSION .. " - Goblin Gold only, no real gold involved.")
     for _, line in ipairs(HELP) do print("   " .. line) end
   end
 end
