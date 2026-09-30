@@ -5,6 +5,7 @@
 ## Version: 1.0.0
 ## X-License: MIT
 ## X-Website: https://github.com/Nyte-fyre/goblin-gambling
+## X-Curse-Project-ID: 1718631
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02
 ## SavedVariables: GoblinGamblingDB
 
