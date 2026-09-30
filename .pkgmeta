@@ -1,0 +1,15 @@
+package-as: GoblinGambling
+
+# Shown as each file's changelog on CurseForge.
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+# Development files that don't belong in the game's AddOns folder.
+ignore:
+  - tests
+  - private
+  - CLAUDE.md
+  - .gitignore
+  - .gitattributes
+  - .pkgmeta

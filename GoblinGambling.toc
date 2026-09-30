@@ -2,7 +2,9 @@
 ## Title: Goblin Gambling Co.
 ## Notes: A joke casino with fake Goblin Gold. Slots and Hold'em, solo or with friends. Never touches your real gold.
 ## Author: Nyte-fyre
-## Version: 0.5.0
+## Version: 1.0.0
+## X-License: MIT
+## X-Website: https://github.com/Nyte-fyre/goblin-gambling
 ## IconTexture: Interface\Icons\INV_Misc_Coin_02
 ## SavedVariables: GoblinGamblingDB
 
