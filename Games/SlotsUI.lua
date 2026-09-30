@@ -31,7 +31,6 @@ for i, sp in ipairs(SPEEDS) do sp.index = i; SPEED_BY_KEY[sp.key] = sp end
 local function CurrentSpeed()
   return SPEED_BY_KEY[GG.db.settings.slotsSpeed] or SPEED_BY_KEY.medium
 end
-local HISTORY = 7        -- lines in the recent results list
 
 local TIER_COLOR = {
   loss    = { 0.75, 0.75, 0.75 },
@@ -50,7 +49,6 @@ local pending       -- result of the spin currently animating
 local autospin = false
 local autospinGen = 0
 local session = { spins = 0, net = 0, lastWin = 0 }
-local history = {}
 
 local driver = CreateFrame("Frame")  -- runs the reel animation; not tied to tab visibility
 
@@ -231,24 +229,6 @@ local function StopAutospin(reason)
   UpdateControls()
 end
 
-local function AddHistory(res)
-  local line
-  if res.payout == res.bet then
-    line = "|cffccccccmoney back|r"
-  elseif res.payout > 0 then
-    local c = TIER_COLOR[res.tier]
-    line = ("|cff%02x%02x%02x+%s (%sx)|r"):format(c[1] * 255, c[2] * 255, c[3] * 255,
-      GG.FormatNumber(res.payout), GG.FormatNumber(res.mult))
-  else
-    line = "|cff888888-" .. GG.FormatNumber(res.bet) .. "|r"
-  end
-  table.insert(history, 1, line)
-  history[HISTORY + 1] = nil
-  if ui then
-    ui.historyText:SetText("|cffffd100Recent|r\n" .. table.concat(history, "\n"))
-  end
-end
-
 local function ShowResult(res)
   local c = TIER_COLOR[res.tier]
   ui.flavor:SetText(Pick(Logic.FLAVOR[res.tier]))
@@ -283,7 +263,6 @@ function Finish(silent)
   session.net = session.net + res.payout - res.bet
   if res.payout > res.bet then session.lastWin = res.payout end
   ShowResult(res)
-  AddHistory(res)
   GG:Fire("STATS_CHANGED")
 
   if not silent then
@@ -437,13 +416,11 @@ local function BuildPaytable()
     y = y - 24
   end
 
-  local rtp = Logic.ComputeRTP()
   local note = f:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
   note:SetPoint("BOTTOMLEFT", 18, 18)
   note:SetPoint("BOTTOMRIGHT", -18, 18)
   note:SetJustifyH("LEFT")
-  note:SetText(("Pays on the middle row. Hearthstone is wild, except for Thunderfury.\n"
-    .. "Goblin-certified payback: %.1f%%. The house always wins, just slowly."):format(rtp * 100))
+  note:SetText("Pays on the middle row. Hearthstone is wild, except for Thunderfury.")
 
   f:SetShown(GG.db.settings.showPaytable)
   return f
@@ -487,20 +464,12 @@ local function BuildPanel(panel)
   payline:SetAlpha(0.45)
   ui.payline = payline
 
-  -- Side columns: session on the left, recent results on the right
+  -- Session summary on the left
   ui.sessionText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   ui.sessionText:SetPoint("TOPLEFT", 6, -14)
   ui.sessionText:SetWidth(110)
   ui.sessionText:SetJustifyH("LEFT")
   ui.sessionText:SetSpacing(3)
-
-  ui.historyText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-  ui.historyText:SetPoint("TOPRIGHT", -6, -14)
-  ui.historyText:SetWidth(112)
-  ui.historyText:SetJustifyH("RIGHT")
-  ui.historyText:SetSpacing(3)
-  ui.historyText:SetWordWrap(false)
-  ui.historyText:SetText("|cffffd100Recent|r\n" .. (#history > 0 and table.concat(history, "\n") or "|cff888888nothing yet|r"))
 
   -- Result lines
   ui.flavor = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
