@@ -15,12 +15,23 @@ Stats.DEFAULTS = {
   curLoseStreak = 0, maxLoseStreak = 0,
   curWinStreak = 0, maxWinStreak = 0,
   bailouts = 0,
+  -- Multiplayer Hold'em only (these hands also count in the totals above).
+  mp = {
+    hands = 0, potsWon = 0, showdownsWon = 0,
+    wagered = 0, won = 0, biggestPot = 0,
+    hosted = 0, joined = 0,
+  },
 }
 
-function Stats.New()
+local function Copy(v)
+  if type(v) ~= "table" then return v end
   local t = {}
-  for k, v in pairs(Stats.DEFAULTS) do t[k] = v end
+  for k, x in pairs(v) do t[k] = Copy(x) end
   return t
+end
+
+function Stats.New()
+  return Copy(Stats.DEFAULTS)
 end
 
 function Stats.Net(s)
@@ -61,6 +72,32 @@ end
 
 function Stats.RecordBailout(s)
   s.bailouts = s.bailouts + 1
+end
+
+local function MP(s)
+  s.mp = s.mp or Copy(Stats.DEFAULTS.mp)
+  return s.mp
+end
+
+-- One multiplayer hand. wager/payout as in RecordRound; showdown = the hand
+-- went to a showdown.
+function Stats.RecordMPHand(s, wager, payout, showdown)
+  local m = MP(s)
+  wager, payout = wager or 0, payout or 0
+  m.hands = m.hands + 1
+  m.wagered = m.wagered + wager
+  m.won = m.won + payout
+  if payout > 0 then
+    m.potsWon = m.potsWon + 1
+    if showdown then m.showdownsWon = m.showdownsWon + 1 end
+    if payout > m.biggestPot then m.biggestPot = payout end
+  end
+end
+
+-- role: "hosted" or "joined"
+function Stats.RecordMPTable(s, role)
+  local m = MP(s)
+  if role == "hosted" then m.hosted = m.hosted + 1 else m.joined = m.joined + 1 end
 end
 
 ------------------------------------------------------------------------

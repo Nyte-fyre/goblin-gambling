@@ -38,8 +38,49 @@ local ROWS = {
     end },
 }
 
+-- "With friends" view: multiplayer Hold'em only.
+local function Pct(part, whole)
+  if whole <= 0 then return "" end
+  return (" |cff888888(%d%%)|r"):format(math.floor(part / whole * 100 + 0.5))
+end
+
+local MP_ROWS = {
+  left = {
+    { "Hands played",   function(m) return FN(m.hands) end },
+    { "Pots won",       function(m) return FN(m.potsWon) .. Pct(m.potsWon, m.hands) end },
+    { "Showdowns won",  function(m) return FN(m.showdownsWon) end },
+    { "Biggest pot",    function(m) return m.biggestPot > 0 and FN(m.biggestPot) or "|cff888888none yet|r" end },
+  },
+  right = {
+    { "Wagered",        function(m) return FN(m.wagered) end },
+    { "Won",            function(m) return FN(m.won) end },
+    { "Net",            function(m) local n = m.won - m.wagered return Colored(n, FN(n)) end },
+    { "Tables hosted",  function(m) return FN(m.hosted) end },
+    { "Tables joined",  function(m) return FN(m.joined) end },
+  },
+}
+
+local function RefreshFriends()
+  local m = GG.db.stats.mp or Stats.New().mp
+  for side, rows in pairs(MP_ROWS) do
+    for i, row in ipairs(rows) do ui.mpValues[side][i]:SetText(row[2](m)) end
+  end
+  ui.mpEmpty:SetShown(m.hands == 0)
+end
+
+local function ShowView(key)
+  GG.db.settings.statsView = key
+  ui.all:SetShown(key ~= "friends")
+  ui.friends:SetShown(key == "friends")
+  for _, b in ipairs(ui.viewButtons) do
+    if b.key == key then b:LockHighlight() else b:UnlockHighlight() end
+    b.underline:SetShown(b.key == key)
+  end
+end
+
 local function Refresh()
   if not ui then return end
+  RefreshFriends()
   local s = GG.db.stats
   local title, desc = Stats.GetTitle(s)
   ui.title:SetText(title)
@@ -76,8 +117,48 @@ local function Refresh()
   ui.repay:SetEnabled(GG:GetDebt() > 0 and GG:GetBalance() > 0)
 end
 
+local function BuildFriends(parent)
+  local f = CreateFrame("Frame", nil, parent)
+  f:SetAllPoints()
+  local head = f:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
+  head:SetPoint("TOP", 0, -4)
+  head:SetText("Hold'em with friends")
+  local sub = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  sub:SetPoint("TOP", head, "BOTTOM", 0, -3)
+  sub:SetText("Hands at tables you hosted or joined. They also count in All games.")
+
+  ui.mpValues = { left = {}, right = {} }
+  for side, rows in pairs(MP_ROWS) do
+    local x = side == "left" and 8 or 252
+    local y = -70
+    for i, row in ipairs(rows) do
+      local l = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+      l:SetPoint("TOPLEFT", x, y)
+      l:SetText(row[1])
+      local v = f:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+      v:SetPoint("TOPRIGHT", f, "TOPLEFT", x + 220, y)
+      v:SetJustifyH("RIGHT")
+      ui.mpValues[side][i] = v
+      y = y - 22
+    end
+  end
+  local divider = GG.CreateLine(f)
+  divider:SetPoint("TOPLEFT", 240, -70)
+  divider:SetSize(1, 106)
+
+  ui.mpEmpty = f:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+  ui.mpEmpty:SetPoint("TOP", 0, -196)
+  ui.mpEmpty:SetText("No hands with friends yet. Poker tab, then Play with friends.")
+  return f
+end
+
 local function BuildPanel(panel)
   ui = { values = {}, titleLines = {} }
+  ui.friends = BuildFriends(panel)
+  ui.all = CreateFrame("Frame", nil, panel)
+  ui.all:SetAllPoints()
+  local root = panel
+  panel = ui.all
 
   -- Current title, big and centred
   local label = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
@@ -136,17 +217,31 @@ local function BuildPanel(panel)
     y = y - 36
   end
 
-  -- Buttons
-  ui.repay = GG.CreateButton(panel, "Pay Grubnik", 110, 22, function() GG:ShowRepay() end,
+  -- Buttons (shared by both views)
+  ui.repay = GG.CreateButton(root, "Pay Grubnik", 110, 22, function() GG:ShowRepay() end,
     "Pay Grubnik", "Pay back as much of your debt as your Goblin Gold covers. Asks first.")
   ui.repay:SetPoint("BOTTOMLEFT", 8, 4)
 
-  local reset = GG.CreateButton(panel, "Reset stats", 110, 22,
+  local reset = GG.CreateButton(root, "Reset stats", 110, 22,
     function() StaticPopup_Show("GOBLINGAMBLING_RESET_STATS") end,
-    "Reset stats", "Wipes lifetime stats and your title. Goblin Gold and debt stay. Asks first.")
+    "Reset stats", "Wipes all stats (both views) and your title. Goblin Gold and debt stay. Asks first.")
   reset:SetPoint("BOTTOMRIGHT", -8, 4)
 
-  panel:SetScript("OnShow", Refresh)
+  -- View switch, bottom centre
+  ui.viewButtons = {}
+  local views = { { key = "all", label = "All games" }, { key = "friends", label = "With friends" } }
+  for i, v in ipairs(views) do
+    local b = GG.CreateButton(root, v.label, 92, 22, function() ShowView(v.key) end)
+    b:SetPoint("BOTTOM", root, "BOTTOM", (i - 1.5) * 96, 4)
+    b.key = v.key
+    local ul = GG.CreateLine(b, 1, 0.82, 0, 0.9)
+    ul:SetPoint("BOTTOMLEFT", 6, -3); ul:SetPoint("BOTTOMRIGHT", -6, -3); ul:SetHeight(2)
+    b.underline = ul
+    ui.viewButtons[i] = b
+  end
+
+  root:SetScript("OnShow", Refresh)
+  ShowView(GG.db.settings.statsView == "friends" and "friends" or "all")
   Refresh()
 end
 

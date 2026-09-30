@@ -352,11 +352,48 @@ local function InfoText()
     vm.handNo or 0)
 end
 
+-- Before the first hand at a multiplayer table the felt lists who is here.
+local function PreGame()
+  return session.kind ~= "local" and (vm.handNo or 0) == 0 and not HandRunning() and not Replaying()
+end
+
+local function RosterText()
+  local lines, n, hostName = {}, 0, nil
+  for i, p in ipairs(t.seats) do
+    if not p.gone then
+      n = n + 1
+      local isHost = (session.kind == "host" and i == me) or p.isHost
+      if isHost then hostName = p.name end
+      local tags = {}
+      if isHost then tags[#tags + 1] = "host" end
+      if i == me then tags[#tags + 1] = "you" end
+      if p.bot then tags[#tags + 1] = "bot" end
+      local tag = #tags > 0 and (" |cff888888(" .. table.concat(tags, ", ") .. ")|r") or ""
+      local nameColor = i == me and "|cff33ff33" or "|cffffd100"
+      lines[#lines + 1] = ("%s%s|r%s  %s"):format(nameColor, p.name, tag, FN(p.stack))
+    end
+  end
+  table.insert(lines, 1, ("|cffffd100At the table (%d/%d)|r"):format(n, Net.MAX_SEATS))
+  return table.concat(lines, "\n"), hostName
+end
+
 local function Render()
   if not ui or not t then return end
   local key = SeatSetKey()
   if key ~= layoutKey then Layout(); layoutKey = key end
   for i = 1, #t.seats do RenderSeat(i) end
+  if PreGame() then
+    local text, hostName = RosterText()
+    ui.roster:SetText(text)
+    ui.roster:Show()
+    if session.kind == "host" then
+      SetStatus("Deal the first hand when everyone's here.")
+    else
+      SetStatus(("Waiting for %s to deal..."):format(hostName or session.hostShort or "the host"))
+    end
+  else
+    ui.roster:Hide()
+  end
   for i = 1, 5 do
     local c = vm.board[i]
     local cf = ui.board[i]
@@ -454,7 +491,11 @@ local function Consume(ev)
     inThisHand = false
     local s = vm.seats[me]
     local payout = s.won or 0
-    GG:RecordRound("hand", handStart + payout - s.stack, payout)
+    local wager = handStart + payout - s.stack
+    GG:RecordRound("hand", wager, payout)
+    if session.kind ~= "local" then
+      GG.Stats.RecordMPHand(GG.db.stats, wager, payout, vm.street == "showdown")
+    end
     GG:Fire("STATS_CHANGED")
   end
 end
@@ -560,6 +601,11 @@ local function Tick(_, elapsed)
   end
 
   if not HandRunning() then
+    -- People can sit down or leave between hands: redraw now and then.
+    if session.kind ~= "local" and now >= (ui.nextIdleRender or 0) then
+      ui.nextIdleRender = now + 0.5
+      Render()
+    end
     if session.kind ~= "client" and GG.db.settings.pokerAutoDeal and ui.dealBar:IsShown()
        and session:CanDeal() then
       if not ui.autoDealAt then
@@ -629,6 +675,10 @@ local function Start(newSession, st, buyIn)
   vm = Poker.NewDisplay(#t.seats)
   qi, timer, thinkingSeat, handStart, inThisHand, layoutKey = 1, 0, nil, nil, false, nil
   GG.db.poker = { stack = buyIn, stake = st.key }
+  if newSession.kind ~= "local" then
+    GG.Stats.RecordMPTable(GG.db.stats, newSession.kind == "host" and "hosted" or "joined")
+    GG:Fire("STATS_CHANGED")
+  end
   GG:PlaySound("chips")
   ShowTable()
   SetStatus(("You buy in for %s. Good luck. You'll need it."):format(FN(buyIn)))
@@ -895,20 +945,9 @@ local function BuildMP(panel)
   sub:SetText("Tables are shared with your group or guild through hidden addon messages. "
     .. "Nothing shows in chat. Everyone plays with their own Goblin Gold.")
 
-  f.enable = GG.CreateCheckbox(f, "Enable multiplayer for this session",
-    function() return MP.enabled end,
-    function(v)
-      if not v and MP.IsBusy() then f.enable:SetChecked(true); return end
-      MP.SetEnabled(v)
-      if v then MP.Browse() end
-      ShowMP()
-    end,
-    "Multiplayer", "Off by default every time you log in. While it is off, the addon ignores and sends no table messages.")
-  f.enable:SetPoint("TOPLEFT", 8, -62)
-
   -- Host row
   local hostLabel = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-  hostLabel:SetPoint("TOPLEFT", 8, -98)
+  hostLabel:SetPoint("TOPLEFT", 8, -70)
   hostLabel:SetText("Host:")
   f.stakeBtn = GG.CreateButton(f, "", 128, 22, function()
     mpState.stake = mpState.stake % #STAKES + 1
@@ -927,11 +966,11 @@ local function BuildMP(panel)
   f.botsBtn:SetPoint("LEFT", f.chanBtn, "RIGHT", 4, 0)
   f.hostBtn = GG.CreateButton(f, "Open table", 110, 22, function() HostTable() end,
     "Open table", "Buy in and open a table. You deal; friends join between hands.")
-  f.hostBtn:SetPoint("TOPRIGHT", -8, -94)
+  f.hostBtn:SetPoint("TOPRIGHT", -8, -66)
 
   -- Open tables
   local listLabel = f:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-  listLabel:SetPoint("TOPLEFT", 8, -134)
+  listLabel:SetPoint("TOPLEFT", 8, -106)
   listLabel:SetText("Open tables")
   f.refresh = GG.CreateButton(f, "Refresh", 80, 20, function()
     if MP.Browse() then MPStatus("Looking for tables...") else MPStatus("|cffff5555Join a group or guild first.|r") end
@@ -941,8 +980,8 @@ local function BuildMP(panel)
   f.rows = {}
   for i = 1, 4 do
     local row = CreateFrame("Frame", nil, f)
-    row:SetPoint("TOPLEFT", 8, -134 - i * 26)
-    row:SetPoint("TOPRIGHT", -8, -134 - i * 26)
+    row:SetPoint("TOPLEFT", 8, -106 - i * 26)
+    row:SetPoint("TOPRIGHT", -8, -106 - i * 26)
     row:SetHeight(24)
     row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     row.text:SetPoint("LEFT", 4, 0)
@@ -952,9 +991,13 @@ local function BuildMP(panel)
     f.rows[i] = row
   end
   f.empty = f:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-  f.empty:SetPoint("TOPLEFT", 12, -164)
+  f.empty:SetPoint("TOPLEFT", 12, -136)
 
-  f.back = GG.CreateButton(f, "Back", 80, 22, function() ShowLobby() end)
+  f.back = GG.CreateButton(f, "Back", 80, 22, function()
+    -- Leaving the page switches multiplayer off again (unless seated).
+    if not MP.IsBusy() then MP.SetEnabled(false) end
+    ShowLobby()
+  end)
   f.back:SetPoint("BOTTOMLEFT", 4, 4)
   f.status = f:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   f.status:SetPoint("BOTTOMLEFT", f.back, "BOTTOMRIGHT", 10, 5)
@@ -1071,6 +1114,13 @@ local function BuildTable(panel)
 
   ui.pot = felt:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   ui.pot:SetPoint("TOP", 0, -8)
+
+  -- Multiplayer: who is at the table before the first hand.
+  ui.roster = felt:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  ui.roster:SetPoint("TOP", 0, -8)
+  ui.roster:SetWidth(224)
+  ui.roster:SetSpacing(1)      -- 7 lines still clear the status line at the bottom
+  ui.roster:Hide()
 
   ui.board = {}
   for k = 1, 5 do
@@ -1204,10 +1254,14 @@ function ShowMP(refreshOnly)
     ui.tableFrame:Hide()
     ui.lobby:Hide()
     ui.mp:Show()
+    -- Opening this page is the opt-in: listen for tables from now on.
+    if not MP.enabled then
+      MP.SetEnabled(true)
+      MP.Browse()
+    end
   end
   local f = ui.mp
   local on = MP.enabled
-  f.enable:Refresh()
   local st = STAKES[mpState.stake]
   f.stakeBtn:SetText(st.name)
   f.chanBtn:SetText(CHANNELS[mpState.channel].label)
@@ -1232,9 +1286,7 @@ function ShowMP(refreshOnly)
       row:Hide()
     end
   end
-  if not on then
-    f.empty:SetText("Tick the box above to look for tables.")
-  elseif #list == 0 then
+  if #list == 0 then
     f.empty:SetText("No open tables yet. Hit Refresh, or open one yourself.")
   else
     f.empty:SetText("")
@@ -1246,6 +1298,8 @@ function ShowTable()
   ui.lobby:Hide()
   ui.mp:Hide()
   ui.tableFrame:Show()
+  -- No loans at a friends' table: it would never end.
+  ui.loan:SetShown(session.kind == "local")
   layoutKey = nil
   Render()
   UpdateControls()
@@ -1265,6 +1319,20 @@ local function BuildPanel(panel)
 end
 
 GG:RegisterPanel("poker", BuildPanel)
+
+-- When it becomes your turn and the casino is open on another tab, jump to
+-- the poker table. (Only on the moment it becomes your turn, so you can
+-- still look at other tabs while you think.)
+local turnWatch = CreateFrame("Frame")
+local wasMyTurn = false
+turnWatch:SetScript("OnUpdate", function()
+  local mine = session ~= nil and session:Legal() ~= nil
+  if mine and not wasMyTurn and GG.frame and GG.frame:IsShown()
+     and GG.db.settings.lastTab ~= "poker" then
+    GG:SelectTab("poker")
+  end
+  wasMyTurn = mine
+end)
 
 GG:On("BALANCE_CHANGED", function()
   if ui and not session then

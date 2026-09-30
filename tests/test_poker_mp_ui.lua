@@ -121,11 +121,38 @@ fireAddon(Net.Msg("Q"), "PARTY", "Hosty-Forever")
 step()
 H.eq(#M.addonSent, 0, "disabled: the addon sends nothing and ignores messages")
 
+-- Everything drawn, so we can look for text on screen.
+local drawn = {}
+do
+  local Widget = getmetatable(UIParent)
+  local orig = Widget.SetText
+  Widget.SetText = function(self, txt) drawn[self] = txt; return orig(self, txt) end
+end
+local function onScreen(...)
+  local needles = { ... }
+  for w, txt in pairs(drawn) do
+    if type(txt) == "string" and w:IsVisible() then
+      local all = true
+      for _, n in ipairs(needles) do if not txt:find(n, 1, true) then all = false end end
+      if all then return true end
+    end
+  end
+  return false
+end
+
+-- No separate toggle: opening "Play with friends" is the opt-in.
+H.eq(checkbox("Enable multiplayer for this session"), nil, "no extra multiplayer checkbox")
 buttonMatching("^Play with friends$"):Fire("OnClick")
-local enable = checkbox("Enable multiplayer for this session")
-H.ok(enable and enable:IsVisible(), "multiplayer page shown")
-enable:SetChecked(true); enable:Fire("OnClick")
-H.eq(MP.enabled, true, "enabled")
+H.eq(MP.enabled, true, "opening Play with friends turns multiplayer on")
+H.ok(buttonMatching("^Open table$"), "multiplayer page shown")
+step()
+local asked = false
+for _, m in ipairs(M.addonSent) do if m.text == Net.Msg("Q") then asked = true end end
+H.ok(asked, "and starts looking for tables straight away")
+buttonMatching("^Back$"):Fire("OnClick")
+H.eq(MP.enabled, false, "Back turns it off again")
+buttonMatching("^Play with friends$"):Fire("OnClick")
+H.eq(MP.enabled, true, "back on")
 step(); step()
 
 ------------------------------------------------------------------------
@@ -141,6 +168,17 @@ H.eq(s.kind, "client", "seated as a client")
 H.eq(GG:GetBalance(), startMoney - 1000, "buy-in paid from Goblin Gold")
 H.eq(GG.db.poker.stack, 1000, "stack mirrored")
 H.eq(host.t.seats[PUI.MySeat()].name, "Nyte", "host sees us")
+
+-- We see the host, and the felt lists everyone before the first hand.
+step(); step()
+H.eq(PUI.Table().seats[1].name, "Hosty", "we see the host's seat")
+H.eq(PUI.Table().seats[1].gone, false, "host's seat is not blank")
+H.ok(onScreen("At the table (3/6)", "Hosty", "host"), "pre-game list shows the host")
+H.ok(onScreen("Grubnik", "bot"), "pre-game list shows the bot")
+H.ok(onScreen("Nyte", "you"), "pre-game list shows us")
+H.ok(onScreen("Waiting for Hosty to deal"), "told who we are waiting for")
+H.eq(buttonMatching("^Get a loan$"), nil, "no loan button at a friends' table")
+H.eq(GG.db.stats.mp.joined, 1, "joined table counted")
 
 local hands = 0
 local function playHostedHand()
@@ -174,6 +212,37 @@ for _ = 1, 12 do
 end
 H.ok(hands >= 3, "played hands at someone else's table (" .. hands .. ")")
 H.eq(GG.db.stats.hands, hands, "those hands count in your stats")
+H.eq(GG.db.stats.mp.hands, hands, "and in the With friends stats")
+H.ok(not onScreen("At the table ("), "pre-game list gone once hands are dealt")
+
+-- On another tab when it becomes our turn: the casino jumps to poker.
+if not PUI.Session() then
+  -- Busted earlier: sit back down first.
+  runUntil(function() return buttonMatching("^Join %(1,000%)$") ~= nil end, 5)
+  buttonMatching("^Join %(1,000%)$"):Fire("OnClick")
+  runUntil(function() return PUI.Session() ~= nil end, 10)
+end
+local jumped = false
+for _ = 1, 6 do
+  if not PUI.Session() or PUI.Table().seats[PUI.MySeat()].stack == 0 then break end
+  if host.t.seats[1].stack == 0 then host.t.seats[1].stack = 1000 end
+  H.ok(host:Deal(), "deal for the tab test")
+  GG:SelectTab("stats")
+  local sawTurn = false
+  runUntil(function() return not host:HandRunning() and (PUI.Session() == nil or PUI.Between()) end, 300, function()
+    if host:Legal() then host:Act({ type = host:Legal().check and "check" or "call" }) end
+    local s = PUI.Session()
+    if s and s:Legal() and not sawTurn then
+      sawTurn = true
+      step(0.05)
+      jumped = GG.db.settings.lastTab == "poker"
+    end
+    if PUI.IsHumanTurn() then PUI.Act({ type = PUI.Session():Legal().check and "check" or "call" }) end
+  end)
+  hands = hands + 1
+  if sawTurn then break end
+end
+H.ok(jumped, "switched to the poker tab when it became our turn")
 
 -- Deal button shows we wait for the host
 if PUI.Session() then H.ok(buttonMatching("^Waiting for the host"), "clients cannot deal") end
@@ -230,6 +299,13 @@ H.eq(#alice:Tables(), 1, "friend sees our table")
 alice:Join(alice:Tables()[1].id, 1000)
 runUntil(function() return alice.state == "seated" end, 10)
 H.eq(hs.t.seats[alice.mySeat].name, "Alice", "friend seated at our table")
+step(); step(); step()
+H.ok(onScreen("At the table (3/6)", "Alice"), "our pre-game list shows the friend who joined")
+H.ok(onScreen("Nyte", "host, you"), "and marks us as the host")
+H.ok(onScreen("Deal the first hand when everyone"), "host is told to deal when ready")
+H.eq(buttonMatching("^Get a loan$"), nil, "no loan button when hosting either")
+H.eq(GG.db.stats.mp.hosted, 1, "hosted table counted")
+H.eq(alice.t.seats[1].name, "Nyte", "friend sees us")
 
 local hosted = 0
 for _ = 1, 12 do
@@ -280,10 +356,19 @@ runUntil(function() return alice.state == "gone" end, 20)
 H.eq(alice.goneWhy, "closed", "friend told the table closed")
 checkMoney("after closing our table")
 
--- Multiplayer can be turned off again once we're not seated
-enable = checkbox("Enable multiplayer for this session")
-enable:SetChecked(false); enable:Fire("OnClick")
+-- Leaving the page switches multiplayer off again once we're not seated
+H.ok(buttonMatching("^Back$"), "back on the Play with friends page after closing")
+buttonMatching("^Back$"):Fire("OnClick")
 H.eq(MP.enabled, false, "disabled again")
+
+-- The With friends stats view
+GG:SelectTab("stats")
+M.findButton("With friends"):Fire("OnClick")
+H.eq(GG.db.settings.statsView, "friends", "stats view switched")
+H.ok(onScreen("Hold'em with friends"), "friends stats shown")
+H.ok(onScreen(GG.FormatNumber(GG.db.stats.mp.hands)), "hands with friends shown")
+M.findButton("All games"):Fire("OnClick")
+H.ok(not onScreen("Hold'em with friends"), "back to all games")
 
 M.realPrint(string.format("test_poker_mp_ui: %d checks passed (%d hands joined, %d hands hosted, %d addon messages sent)",
   H.passed, hands, hosted, #sendTimes))

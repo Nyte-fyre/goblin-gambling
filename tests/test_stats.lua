@@ -73,6 +73,29 @@ H.eq(S.TitleProgress(S.New())[1].cur, 0, "winning players show 0 toward whale")
 local _, desc = S.GetTitle(S.New())
 H.ok(type(desc) == "string" and #desc > 0, "titles have descriptions")
 
+-- Multiplayer stats
+local m = S.New()
+local other = S.New()
+S.RecordMPHand(m, 100, 0, false)         -- lost 100
+S.RecordMPHand(m, 50, 300, true)         -- won a showdown
+S.RecordMPHand(m, 20, 45, false)         -- won without showdown
+S.RecordMPTable(m, "hosted")
+S.RecordMPTable(m, "joined")
+S.RecordMPTable(m, "joined")
+H.eq(m.mp.hands, 3, "mp hands")
+H.eq(m.mp.potsWon, 2, "mp pots won")
+H.eq(m.mp.showdownsWon, 1, "mp showdowns won")
+H.eq(m.mp.wagered, 170, "mp wagered")
+H.eq(m.mp.won, 345, "mp won")
+H.eq(m.mp.biggestPot, 300, "mp biggest pot")
+H.eq(m.mp.hosted, 1, "tables hosted")
+H.eq(m.mp.joined, 2, "tables joined")
+H.eq(other.mp.hands, 0, "each New() has its own mp table")
+H.eq(m.hands, 0, "mp recording alone does not touch the overall counters")
+local legacy = { totalWagered = 0 }     -- saved before mp stats existed
+S.RecordMPHand(legacy, 10, 0, false)
+H.eq(legacy.mp.hands, 1, "old saves get an mp table on first use")
+
 -- Addon wrappers use GG.db.stats
 GG.db = { stats = S.New() }
 GG:RecordRound("spin", 10, 2500)

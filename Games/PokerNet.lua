@@ -275,13 +275,17 @@ function Host:Announce()
   self.nextAnnounce = self.now() + Net.ANNOUNCE_EVERY
 end
 
-function Host:Roster()
+function Host:RosterString()
   local parts = {}
   for i, p in ipairs(self.t.seats) do
     local kind = p.gone and "e" or (i == self.mySeat and "h") or (p.bot and "b") or "p"
     parts[#parts + 1] = ("%d:%s:%s:%d"):format(i, kind, Clean(p.name), p.stack)
   end
-  self:Broadcast(Net.Msg("R", self.id, table.concat(parts, ";")))
+  return table.concat(parts, ";")
+end
+
+function Host:Roster()
+  self:Broadcast(Net.Msg("R", self.id, self:RosterString()))
 end
 
 -- Queue every new engine event, plus a turn marker (and the player's
@@ -384,6 +388,7 @@ function Host:Deal()
   for _, p in ipairs(st.seats) do
     if p.bot and p.stack <= 0 then p.stack = Net.MAX_BUYIN_BB * st.bb end
   end
+  self:Roster()   -- everyone starts each hand with the same seat list
   local ok = Poker.StartHand(st)
   if not ok then return false end
   for i, p in ipairs(st.seats) do
@@ -439,7 +444,9 @@ function Host:Join(sender, buyIn)
   p.gone, p.sittingOut, p.leaving, p.bot, p.human = nil, nil, nil, nil, true
   p.inHand, p.folded, p.allIn, p.bet, p.totalIn, p.hole = false, false, false, 0, 0, nil
   self.seatOf[sender] = seat
-  self:Whisper(sender, Net.Msg("OK", self.id, seat, buyIn))
+  -- The seat list rides along: the group-channel roster can arrive before
+  -- this whisper, and a player who is not seated yet would ignore it.
+  self:Whisper(sender, Net.Msg("OK", self.id, seat, buyIn, self:RosterString()))
   self:Roster()
   self:Announce()
 end
@@ -595,6 +602,7 @@ function Client:OnRoster(field)
       local p = self:Seat(seat)
       p.name, p.gone = f[3], f[2] == "e"
       p.bot = f[2] == "b" and Bots.BY_NAME[f[3]] or nil
+      p.isHost = f[2] == "h"
       if not self:HandRunning() or p.gone then p.stack = stack end
       if p.gone then p.inHand, p.folded = false, false end
     end
@@ -626,7 +634,14 @@ function Client:OnEvent(ev)
     ev.hand = s and s.shown and s.shown.name or nil
   elseif ev.type == "hand" then
     if #vm.seats < #ev.stacks then vm = Poker.NewDisplay(#ev.stacks); self.liveVM = vm end
-    for i = 1, #ev.stacks do self:Seat(i) end
+    for i = 1, #ev.stacks do
+      local p = self:Seat(i)
+      if ev.inHand[i] and p.gone then
+        -- Dealt in but missing from our seat list: show them anyway.
+        p.gone = false
+        if p.name == "(empty)" then p.name = "Player " .. i end
+      end
+    end
   end
   if ev.type ~= "turn" then Poker.ApplyEvent(vm, ev) end
 
@@ -694,10 +709,14 @@ function Client:OnMessage(sender, text, channel)
     self.holes, self.seq = {}, 0
     local p = self:Seat(seat)
     p.stack, p.gone, p.name = buyIn, false, Clean(ShortName(self.me))
+    if f[4] then self:OnRoster(f[4]) end
+    if self.earlyRoster then self:OnRoster(self.earlyRoster); self.earlyRoster = nil end
     if self.cb.onSeated then self.cb.onSeated(seat, buyIn) end
   elseif kind == "NO" and self.state == "joining" then
     self.state, self.host, self.joinId = "browsing", nil, nil
     if self.cb.onRejected then self.cb.onRejected(f[2] or "?") end
+  elseif kind == "R" and self.state == "joining" then
+    self.earlyRoster = f[2]      -- arrived before our OK; applied once seated
   elseif self.state ~= "seated" then
     return
   elseif kind == "R" then

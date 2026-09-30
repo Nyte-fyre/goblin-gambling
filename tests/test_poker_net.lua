@@ -77,8 +77,16 @@ local function remove(name)
   for i, n in ipairs(order) do if n == name then table.remove(order, i) end end
 end
 
-local function deliver(from, msg)
+-- WoW does not keep whispers and group messages in order with each other.
+-- With this on, whispers arrive only after the next round of group messages.
+local delayWhispers, held = false, {}
+
+local function deliver(from, msg, late)
   H.ok(#msg.text <= Net.MAX_LEN, "message within the size limit")
+  if msg.kind == "WHISPER" and delayWhispers and not late then
+    held[#held + 1] = { from = from, msg = msg }
+    return
+  end
   log[#log + 1] = { from = from, kind = msg.kind, target = msg.target, text = msg.text }
   if msg.kind == "WHISPER" then
     local n = nodes[msg.target]
@@ -92,6 +100,9 @@ end
 
 local function pump(dt)
   now = now + (dt or 0.1)
+  local late = held
+  held = {}
+  for _, h in ipairs(late) do deliver(h.from, h.msg, true) end
   for _, name in ipairs(order) do
     local n = nodes[name]
     if n and not mute[name] then n:Pump() end
@@ -385,5 +396,44 @@ for _, c in ipairs(full) do if c.state == "seated" then seatedCount = seatedCoun
 H.eq(seatedCount, 4, "four more players fill the table")
 H.eq(full[5].rejected, "full", "fifth joiner told the table is full")
 H.eq(full[6].rejected, "full", "sixth joiner told the table is full")
+
+------------------------------------------------------------------------
+-- Whispers arriving after group messages: the joiner still sees everyone
+------------------------------------------------------------------------
+local host3 = Net.NewHost({ me = "Third-Realm", channel = "PARTY", stake = "copper", buyIn = 1000, now = clock,
+  rng = H.rng(21), bots = {}, rollouts = 6 })
+add("Third-Realm", host3)
+local erin = newClient("Erin-Realm")
+local fred = newClient("Fred-Realm")
+erin:Query("PARTY"); fred:Query("PARTY")
+pump(); pump()
+delayWhispers = true
+erin:Join(host3.id, 1000)
+pump(); pump(); pump()
+H.eq(erin.state, "seated", "erin seated despite the reordering")
+H.eq(erin.t.seats[1].name, "Third", "erin sees the host")
+H.eq(erin.t.seats[1].gone, false, "host's seat is not blank for erin")
+fred:Join(host3.id, 1000)
+pump(); pump(); pump()
+H.eq(fred.t.seats[1].name, "Third", "fred sees the host")
+H.eq(fred.t.seats[erin.mySeat].name, "Erin", "fred sees erin")
+H.eq(erin.t.seats[fred.mySeat].name, "Fred", "erin sees fred join")
+H.ok(host3:Deal(), "deal with reordered delivery")
+for _ = 1, 400 do
+  if not host3:HandRunning() then break end
+  if host3:Legal() then host3:Act({ type = host3:Legal().check and "check" or "call" }) end
+  for _, c in ipairs({ erin, fred }) do
+    if c:Legal() then c:Act({ type = c:Legal().check and "check" or "call" }) end
+  end
+  pump(0.5)
+end
+pump(); pump(); pump()
+H.eq(host3:HandRunning(), false, "hand completes with reordered delivery")
+for i, p in ipairs(host3.t.seats) do
+  H.eq(erin.t.seats[i].stack, p.stack, "erin's stacks match after reordering, seat " .. i)
+  H.eq(fred.t.seats[i].stack, p.stack, "fred's stacks match after reordering, seat " .. i)
+end
+for s = 1, 3 do H.eq(host3.t.seats[s].strikes or 0, 0, "nobody timed out, seat " .. s) end
+delayWhispers = false
 
 print(string.format("test_poker_net: %d checks passed (%d showdowns over the network)", H.passed, showdowns))

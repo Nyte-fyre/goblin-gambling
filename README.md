@@ -22,9 +22,15 @@ mail, never sends chat messages, and only touches its own SavedVariables
 
 ## Playing Hold'em with friends
 
-Poker tab, **Play with friends**, then tick **Enable multiplayer for this
-session** (it is off every time you log in). One player opens a table for
-their group or guild; others see it in the list and join between hands.
+Poker tab, **Play with friends**. One player opens a table for their group
+or guild; others see it in the list and join between hands. Until everyone
+is ready, the table lists who has sat down. Multiplayer is only active while
+you are on that page or seated at a friends' table.
+
+- No loans at friends' tables.
+- Stats tab, **With friends**: hands, pots won, net and tables hosted/joined.
+- If the casino is open on another tab when it becomes your turn, it jumps
+  to the poker table.
 
 - Messages use hidden addon messages (prefix `GGCASINO`) on the party, raid
   or guild channel. Nothing is ever posted in chat.
