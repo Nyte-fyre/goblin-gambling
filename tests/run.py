@@ -37,6 +37,8 @@ if __name__ == "__main__":
     main(sys.argv[1:] or [
         "tests/test_slots.lua",
         "tests/test_poker_eval.lua",
+        "tests/test_poker_engine.lua",
+        "tests/test_poker_sim.lua",
         "tests/test_stats.lua",
         "tests/test_format.lua",
         "tests/test_ui_smoke.lua",

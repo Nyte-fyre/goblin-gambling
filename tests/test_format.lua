@@ -18,7 +18,7 @@ H.ok(GG.FormatGold(1234):find("1,234", 1, true), "gold format includes number")
 -- Every addon file must at least compile under Lua 5.1.
 local files = {
   "Core.lua", "Sound.lua", "Stats.lua", "UI/Widgets.lua", "UI/Window.lua",
-  "Games/SlotsLogic.lua", "Games/PokerLogic.lua", "Games/SlotsUI.lua",
+  "Games/SlotsLogic.lua", "Games/PokerLogic.lua", "Games/PokerBots.lua", "Games/SlotsUI.lua",
   "UI/StatsTab.lua",
 }
 for _, f in ipairs(files) do

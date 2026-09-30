@@ -15,6 +15,7 @@ Sound.lua
 Stats.lua
 Games\SlotsLogic.lua
 Games\PokerLogic.lua
+Games\PokerBots.lua
 UI\Widgets.lua
 UI\Window.lua
 Games\SlotsUI.lua
